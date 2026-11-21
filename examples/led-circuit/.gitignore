@@ -1,0 +1,13 @@
+# LibrePCB files
+user/
+*.user.lp
+.lock
+*~
+
+# Files created by operating systems or file managers
+.DS_Store
+Thumbs.db
+
+# Files created by other applications
+*.autosave
+*.swp
