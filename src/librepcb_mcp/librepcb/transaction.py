@@ -130,8 +130,12 @@ def edit(path: Path, roots: tuple[Path, ...], cli: LibrePCBCli, backup_root: Pat
             for src, dst in project.new_dirs:
                 if dst.exists():
                     raise LibrePCBError(f"refusing to overwrite existing {dst}")
-                shutil.copytree(src, dst)
-                created_dirs.append(dst)
+                dst.parent.mkdir(parents=True, exist_ok=True)
+                with tempfile.TemporaryDirectory(dir=dst.parent, prefix=".librepcb-mcp-") as temp:
+                    staged = Path(temp) / "element"
+                    shutil.copytree(src, staged)
+                    staged.rename(dst)
+                    created_dirs.append(dst)
             for rel, data in rendered.items():
                 target = project.dir / rel
                 written[target] = target.read_bytes() if target.exists() else None
