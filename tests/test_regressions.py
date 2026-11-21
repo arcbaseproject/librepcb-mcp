@@ -7,6 +7,7 @@ import pytest
 
 from librepcb_mcp.config import Config
 from librepcb_mcp.librepcb.cli import CliResult
+from librepcb_mcp.librepcb.library import LibraryIndex
 from librepcb_mcp.librepcb.transaction import edit, make_backup
 from librepcb_mcp.service import Service
 
@@ -60,3 +61,16 @@ def test_library_copy_failure_can_be_retried(tmp_path, monkeypatch):
     with edit(project, svc.cfg.roots, svc.cli, svc.cfg.backup_dir, "test") as (prj, _):
         prj.new_dirs.append((src, dst))
     assert (dst / "element.lp").read_text() == "library content"
+
+
+@pytest.mark.parametrize("content", [b"(librepcb_device)", b"\xff"])
+def test_library_search_skips_malformed_device(tmp_path, content):
+    library = tmp_path / "test.lplib"
+    bad_dir = library / "dev" / str(uuid4())
+    bad_dir.mkdir(parents=True)
+    (bad_dir / "device.lp").write_bytes(content)
+    uuid = str(uuid4())
+    good_dir = library / "dev" / uuid
+    good_dir.mkdir()
+    (good_dir / "device.lp").write_text(f'(librepcb_device {uuid} (name "Good") )')
+    assert [element.uuid for element in LibraryIndex((library,)).search("")] == [uuid]

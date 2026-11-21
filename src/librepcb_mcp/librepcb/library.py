@@ -76,7 +76,10 @@ class LibraryIndex:
         f = d / f"{LIB_KINDS[kind]}.lp"
         try:
             root = sexpr.parse(f.read_bytes())
-        except (OSError, sexpr.SExprError) as e:
+            uuid = root.arg(0)
+            if not is_uuid(uuid):
+                raise sexpr.SExprError(f"invalid element UUID {uuid!r}")
+        except (OSError, UnicodeDecodeError, sexpr.SExprError) as e:
             log.warning("skip unreadable %s: %s", f, e)
             return None
 
@@ -87,7 +90,7 @@ class LibraryIndex:
         refs = {}
         if kind == "dev":
             refs = {"component": opt("component"), "package": opt("package")}
-        return Element(kind, root.arg(0), opt("name"), opt("description"), opt("keywords"),
+        return Element(kind, uuid, opt("name"), opt("description"), opt("keywords"),
                        opt("version"), opt("deprecated") == "true", d, lib.name, refs)
 
     def index(self) -> dict[str, dict[str, Element]]:
