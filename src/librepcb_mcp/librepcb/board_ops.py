@@ -263,9 +263,8 @@ def _check_layer(p: PadRef, layer: str) -> None:
 
 
 def _segment_with(brd: SList, anchor: tuple) -> SList | None:
-
     for seg in brd.lists("netsegment"):
-        if anchor[0] == "via" and seg.find_uuid("via", anchor[1]) is not None:
+        if anchor[0] in ("via", "junction") and seg.find_uuid(anchor[0], anchor[1]) is not None:
             return seg
         for tr in seg.lists("trace"):
             if anchor in (anchor_of(tr.req("from")), anchor_of(tr.req("to"))):
@@ -299,13 +298,14 @@ def _check_copper(brd: SList, layer: str) -> None:
 
 def _endpoint(prj: Project, brd: SList, ref: str) -> tuple[list, str | None, tuple, PadRef | None]:
     """-> (anchor items, net, anchor key, pad)"""
-    if ref.startswith("via:"):
-        vid = ref[4:]
-        for seg in brd.lists("netsegment"):
-            if seg.find_uuid("via", vid) is not None:
-                net = seg.child_arg("net")
-                return [L("via", vid)], (None if net == "none" else net), ("via", vid), None
-        raise LibrePCBError(f"No via {vid} on board")
+    for kind in ("via", "junction"):
+        if ref.startswith(kind + ":"):
+            uid = ref[len(kind) + 1:]
+            for seg in brd.lists("netsegment"):
+                if seg.find_uuid(kind, uid) is not None:
+                    net = seg.child_arg("net")
+                    return [L(kind, uid)], (None if net == "none" else net), (kind, uid), None
+            raise LibrePCBError(f"No {kind} {uid} on board")
     p = resolve_pad(prj, brd, ref)
     return _pad_end(p), p.net, ("pad", p.comp.arg(0), p.pad), p
 
@@ -337,10 +337,12 @@ def create_trace(prj: Project, start: str, end: str, layer: str = "top_cu",
     if sa is not None and sb is not None and sa is not sb:
         merge_segments(brd, sa, sb, ["via", "junction", "trace"])
     chain = [a_items]
+    junctions = []
     for x, y in waypoints_mm or []:
         j = L("junction", g.new_uuid(), g.pos_node((mm_to_nm(x), mm_to_nm(y))))
         g.add_child(seg, j, "brd_netsegment")
         chain.append([L("junction", j.arg(0))])
+        junctions.append(f"junction:{j.arg(0)}")
     chain.append(b_items)
     ids = []
     for u, v in zip(chain, chain[1:], strict=False):
@@ -349,7 +351,8 @@ def create_trace(prj: Project, start: str, end: str, layer: str = "top_cu",
         ids.append(t.arg(0))
     prj.touch(brd_rel)
     return {"board": brd.child_arg("name"), "net": prj.net_name(net) if net else None,
-            "layer": layer, "width_mm": float(width), "trace_ids": ids}
+            "layer": layer, "width_mm": float(width), "trace_ids": ids,
+            "waypoint_junctions": junctions}
 
 
 def create_via(prj: Project, net: str, x_mm: float, y_mm: float, drill_mm: float | None = None,

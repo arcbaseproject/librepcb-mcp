@@ -120,7 +120,12 @@ def test_build_circuit_and_board_from_scratch(cfg: Config):
     r = edit(cfg, svc, lpp, lambda p: bo.route_net(p, "N1"))
     assert len(r["traces_created"]) == 1
     v = edit(cfg, svc, lpp, lambda p: bo.create_via(p, "GND", 30, 5))
-    edit(cfg, svc, lpp, lambda p: bo.create_trace(p, "R2:2", v["connect_with"], "top_cu", 0.3, [(28, 5)]))
+    t = edit(cfg, svc, lpp, lambda p: bo.create_trace(p, "R2:2", v["connect_with"], "top_cu", 0.3,
+                                                      [(28, 5), (29, 5)]))
+    assert len(t["waypoint_junctions"]) == 2
+    # T-join from an existing junction to another endpoint of the same net
+    edit(cfg, svc, lpp, lambda p: bo.create_trace(p, t["waypoint_junctions"][0], v["connect_with"],
+                                                  "top_cu", 0.3, [(28, 4)]))
     with pytest.raises(LibrePCBError, match="different nets"):
         edit(cfg, svc, lpp, lambda p: bo.create_trace(p, "R1:1", "R2:2"))
     edit(cfg, svc, lpp, lambda p: bo.create_board(p, "second", 20, 20))

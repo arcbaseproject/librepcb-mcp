@@ -46,6 +46,21 @@ See [docs/architecture.md](docs/architecture.md#supported-vs-unsupported).
 
 ## Installation
 
+### Quick install (detects your coding agents)
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/arcbaseproject/librepcb-mcp/main/install.sh | bash
+```
+
+The interactive installer checks Python and LibrePCB (offers the Flatpak if LibrePCB is missing), installs
+the server into `~/.local/share/librepcb-mcp`, asks which project folders it may edit, optionally downloads
+official LibrePCB libraries, and registers the server with the agents it finds: Claude Code, Codex CLI,
+Gemini CLI, Cursor, Windsurf, VS Code / VSCodium. Config files are backed up first; files it cannot parse
+(e.g. JSON with comments) are left alone and you get the snippet to paste. Re-run to update.
+`bash -s -- --yes` accepts defaults, `bash -s -- --uninstall` removes it.
+
+### Manual install
+
 ```bash
 git clone https://github.com/arcbaseproject/librepcb-mcp.git
 cd librepcb-mcp
@@ -118,7 +133,7 @@ Other MCP clients: run `/absolute/path/.venv/bin/python -m librepcb_mcp` (or the
 * Units: **millimeters** and **degrees** (counter-clockwise). LibrePCB's y axis points up.
   Schematic grid is 2.54 mm.
 * Components: designator (`R1`) or UUID. Pins: `DESIGNATOR:PIN`, PIN = symbol pin name or
-  signal name (`R1:1`, `LED1:A`, `U1:VCC`). Board pads: `DESIGNATOR:PAD`; vias: `via:<uuid>`.
+  signal name (`R1:1`, `LED1:A`, `U1:VCC`). Board pads: `DESIGNATOR:PAD`; vias: `via:<uuid>`; trace corners: `junction:<uuid>`.
 * Schematics/boards: name, UUID or index; default is the first.
 * Edit results include `success`, the changed files, the backup path and what verified the
   result. Errors come back as MCP tool errors with LibrePCB's own message where relevant.
@@ -152,7 +167,7 @@ Other MCP clients: run `/absolute/path/.venv/bin/python -m librepcb_mcp` (or the
 | `add_device_to_board` | Place a component's footprint (optionally bottom side) |
 | `place_component` / `rotate_component` | Move, rotate, flip devices |
 | `set_board_outline` | Polygon or rectangle outline |
-| `create_trace` | Trace between pads/vias of one net, optional corner points |
+| `create_trace` | Trace between pads/vias/junctions of one net, optional corner points (returned as `junction:<uuid>` for T-joins) |
 | `create_via` | Through via on a net |
 | `route_net` | Straight traces joining all unconnected pads of a net |
 | `run_erc` / `run_drc` | LibrePCB's checks; non-approved messages with severity |

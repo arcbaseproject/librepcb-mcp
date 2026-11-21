@@ -11,8 +11,9 @@ from ..service import Service
 from . import Board, ComponentRef, ProjectPath, registrar
 
 Layer = Annotated[str, Field(description="Copper layer: top_cu, bot_cu, or in1_cu... (inner)")]
-Endpoint = Annotated[str, Field(description="Pad as 'DESIGNATOR:PAD' (pad name or signal name) "
-                                            "or 'via:<uuid>'")]
+Endpoint = Annotated[str, Field(description="Pad as 'DESIGNATOR:PAD' (pad name or signal name), "
+                                            "'via:<uuid>', or 'junction:<uuid>' (a waypoint "
+                                            "returned by an earlier create_trace, for T-joins)")]
 
 
 def register(mcp, svc: Service) -> None:  # noqa: ANN001
@@ -98,8 +99,9 @@ def register(mcp, svc: Service) -> None:  # noqa: ANN001
             description="Intermediate corner points [[x_mm, y_mm], ...]")] = None,
         board: Board = None,
     ) -> dict:
-        """Draw a copper trace between two pads/vias of the same net, optionally via corner
-        points. Electrical rules are not checked here: run run_drc afterwards."""
+        """Draw a copper trace between two pads/vias/junctions of the same net, optionally via
+        corner points. Returns the corner points as 'junction:<uuid>' endpoints so later traces
+        can branch from them. Clearances are not checked here: run run_drc afterwards."""
         return svc.edit(project_path, "create_trace", lambda p: bo.create_trace(
             p, start, end, layer, width_mm, waypoints, board))
 
