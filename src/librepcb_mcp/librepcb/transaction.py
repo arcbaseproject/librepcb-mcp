@@ -68,11 +68,25 @@ def _project_key(project_dir: Path) -> str:
 
 
 def make_backup(project_dir: Path, backup_root: Path, reason: str) -> Path:
+    backup_root = backup_root.resolve()
     base = backup_root / _project_key(project_dir)
     base.mkdir(parents=True, exist_ok=True)
     stamp = dt.datetime.now().strftime("%Y%m%d-%H%M%S-%f")
     dest = base / f"{stamp}-{reason}"
-    shutil.copytree(project_dir, dest, ignore=_BACKUP_IGNORE, symlinks=True)
+    excluded = backup_root if backup_root.is_relative_to(project_dir) and backup_root != project_dir else base
+
+    def ignore(directory: str, names: list[str]) -> set[str]:
+        ignored = _BACKUP_IGNORE(directory, names)
+        if Path(directory) == excluded.parent:
+            ignored.add(excluded.name)
+        return ignored
+
+    dest.mkdir()
+    try:
+        shutil.copytree(project_dir, dest, ignore=ignore, symlinks=True, dirs_exist_ok=True)
+    except BaseException:
+        shutil.rmtree(dest, ignore_errors=True)
+        raise
     for old in sorted(p for p in base.iterdir() if p.is_dir())[:-BACKUP_KEEP]:
         shutil.rmtree(old, ignore_errors=True)
     return dest
