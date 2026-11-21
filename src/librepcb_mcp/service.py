@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import logging
+import tempfile
 from collections.abc import Callable
 from pathlib import Path
 
@@ -115,13 +116,11 @@ class Service:
                     "gerber": lambda: jobs.gerber_excellon(board_uuid),  # type: ignore[arg-type]
                     "bom": lambda: jobs.bom(board_uuid), "lppz": jobs.lppz}
         out.mkdir(parents=True, exist_ok=True)
-        jobs_path = out / ".librepcb-mcp-jobs.lp"
-        transaction.atomic_write(jobs_path, jobs.jobs_file(*(builders[k]() for k in kinds)))
-        try:
+        with tempfile.TemporaryDirectory(dir=out, prefix=".librepcb-mcp-") as temp:
+            jobs_path = Path(temp) / "jobs.lp"
+            jobs_path.write_bytes(jobs.jobs_file(*(builders[k]() for k in kinds)))
             r, rep = self.cli.open_project(prj.lpp, "--jobs", jobs_path, "--run-jobs",
                                            "--outdir", out)
-        finally:
-            jobs_path.unlink(missing_ok=True)
         if not r.ok:
             raise LibrePCBError(f"Export failed (exit {r.returncode}):\n{(r.stdout + r.stderr).strip()}")
         missing = [f for f in rep.output_files if not Path(f).is_file()]
