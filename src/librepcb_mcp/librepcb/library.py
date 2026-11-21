@@ -66,8 +66,19 @@ class LibraryIndex:
         self._stamp: tuple | None = None
 
     def _current_stamp(self, libs: list[Path]) -> tuple:
-        return tuple((str(lib), (lib / k).stat().st_mtime_ns if (lib / k).exists() else 0)
-                     for lib in libs for k in ("cmp", "dev"))
+        stamp = []
+        for lib in libs:
+            for kind in ("cmp", "dev"):
+                for element in sorted((lib / kind).glob("*")):
+                    if not is_uuid(element.name):
+                        continue
+                    path = element / f"{LIB_KINDS[kind]}.lp"
+                    try:
+                        stat = path.stat()
+                    except OSError:
+                        continue
+                    stamp.append((path, stat.st_ino, stat.st_size, stat.st_mtime_ns, stat.st_ctime_ns))
+        return tuple(stamp)
 
     def libraries(self) -> list[Path]:
         return find_lplibs(self.paths)

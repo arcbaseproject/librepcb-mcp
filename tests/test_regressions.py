@@ -74,3 +74,17 @@ def test_library_search_skips_malformed_device(tmp_path, content):
     good_dir.mkdir()
     (good_dir / "device.lp").write_text(f'(librepcb_device {uuid} (name "Good") )')
     assert [element.uuid for element in LibraryIndex((library,)).search("")] == [uuid]
+
+
+def test_library_search_refreshes_device_metadata(tmp_path):
+    library = tmp_path / "test.lplib"
+    uuid = str(uuid4())
+    path = library / "dev" / uuid / "device.lp"
+    path.parent.mkdir(parents=True)
+    path.write_text(f'(librepcb_device {uuid} (name "Before"))')
+    index = LibraryIndex((library,))
+    assert [element.uuid for element in index.search("Before")] == [uuid]
+
+    path.write_text(f'(librepcb_device {uuid} (name "After"))')
+    assert [element.uuid for element in index.search("After")] == [uuid]
+    assert index.search("Before") == []
